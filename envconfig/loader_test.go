@@ -13,16 +13,19 @@ import (
 func TestLoadPrecedenceAndTypes(t *testing.T) {
 	text, unchanged, empty := "default", "untouched", "default"
 	enabled, count, size, timeout := true, 13, int64(17), time.Minute
+	zeroTimeout, zeroUnitTimeout := time.Minute, 2*time.Minute
 	list, cleared := []string{"default"}, []string{"default"}
 	settings := []envconfig.Setting{
 		{"TEXT", &text}, {"UNCHANGED", &unchanged}, {"EMPTY", &empty},
 		{"ENABLED", &enabled}, {"COUNT", &count}, {"SIZE", &size},
 		{"TIMEOUT", &timeout}, {"LIST", &list}, {"CLEARED", &cleared},
+		{"ZERO_TIMEOUT", &zeroTimeout}, {"ZERO_UNIT_TIMEOUT", &zeroUnitTimeout},
 	}
-	path := writeEnv(t, "TEST_TEXT=file\nTEST_EMPTY=file\nTEST_ENABLED=true\nTEST_COUNT=not-an-integer\nTEST_SIZE=4294967297\nTEST_TIMEOUT=350ms\nTEST_LIST= first, second \nTEST_CLEARED=from-file\n")
+	path := writeEnv(t, "TEST_TEXT=file\nTEST_EMPTY=file\nTEST_ENABLED=true\nTEST_COUNT=not-an-integer\nTEST_SIZE=4294967297\nTEST_TIMEOUT=350ms\nTEST_LIST= first, second \nTEST_CLEARED=from-file\nTEST_ZERO_TIMEOUT=7s\nTEST_ZERO_UNIT_TIMEOUT=11s\n")
 	loader := envconfig.Loader{Prefix: "TEST_", LookupEnv: lookup(map[string]string{
 		"TEST_TEXT": "process", "TEST_EMPTY": "", "TEST_ENABLED": "false",
 		"TEST_COUNT": "0", "TEST_CLEARED": "", "TEST_UNKNOWN": "ignored",
+		"TEST_ZERO_TIMEOUT": "0", "TEST_ZERO_UNIT_TIMEOUT": "0s",
 	})}
 	if err := loader.Load(path, settings); err != nil {
 		t.Fatal(err)
@@ -33,6 +36,9 @@ func TestLoadPrecedenceAndTypes(t *testing.T) {
 	}
 	if !reflect.DeepEqual(list, []string{"first", "second"}) || len(cleared) != 0 {
 		t.Fatalf("lists = %q, %q", list, cleared)
+	}
+	if zeroTimeout != 0 || zeroUnitTimeout != 0 {
+		t.Fatalf("zero duration overrides = %s, %s", zeroTimeout, zeroUnitTimeout)
 	}
 }
 
