@@ -2,6 +2,16 @@
 
 Shared Go packages for Buildkite. Requires Go 1.23 or newer.
 
+## hostname
+
+Use [`hostname.Valid`](hostname/hostname.go) to check ASCII hostname label syntax without normalization or DNS lookup. You control IP-literal handling, case normalization, trailing dots, wildcards, and ports in your application. Numeric dotted names meet the label grammar, so this check alone doesn't distinguish DNS names from IP literals.
+
+## publicip
+
+Use [`publicip.IsPublic`](publicip/publicip.go) to apply a conservative public-address policy to a `netip.Addr`. It rejects invalid and zoned addresses and checks IPv4-mapped IPv6 as IPv4. See the package documentation and exclusion list for the policy's scope and limitations.
+
+For outbound SSRF protection, you must also authorize destinations, validate every DNS answer, and dial only the vetted addresses without resolving the name again. Keep internal-network exceptions and application-specific connection policy in your application.
+
 ## envconfig
 
 Use [`envconfig`](envconfig/loader.go) to load an explicitly selected dotenv file and process environment overrides into an explicit table of field pointers. Set defaults before loading and perform application-specific validation afterward.
