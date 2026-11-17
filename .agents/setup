@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+go_version=1.23.12
+go_sha256=d3847fef834e9db11bf64e3fb34db9c04db14e068eeb064f49af747010454f90
+go_dir="$HOME/.local/share/go/$go_version"
+
+if [[ "$("$go_dir/bin/go" version 2>/dev/null || true)" != "go version go$go_version linux/amd64" ]]; then
+  echo "Installing Go $go_version"
+  download_dir=$(mktemp -d)
+  trap 'rm -rf "$download_dir"' EXIT
+  curl --fail --silent --show-error --location \
+    "https://go.dev/dl/go$go_version.linux-amd64.tar.gz" \
+    --output "$download_dir/go.tar.gz"
+  echo "$go_sha256  $download_dir/go.tar.gz" | sha256sum --check
+
+  mkdir -p "$go_dir"
+  tar -xzf "$download_dir/go.tar.gz" -C "$go_dir" --strip-components=1
+fi
+
+printf -v path_line 'export PATH="$HOME/.local/share/go/%s/bin:$PATH"' "$go_version"
+if ! grep -Fqx "$path_line" "$HOME/.bash_profile" 2>/dev/null; then
+  printf '\n%s\n' "$path_line" >> "$HOME/.bash_profile"
+fi
+
+export PATH="$go_dir/bin:$PATH"
+go version
