@@ -4,10 +4,10 @@ agents:
 steps:
   - label: ":go: Format, test, race, and vet"
     command: |
-      set -euo pipefail
+      set -eu
       go version
       unformatted=$(gofmt -l envconfig)
-      if [[ -n "$$unformatted" ]]; then
+      if [ -n "$$unformatted" ]; then
         printf 'Run gofmt on these files:\n%s\n' "$$unformatted" >&2
         exit 1
       fi
