@@ -50,6 +50,7 @@ func TestLoadFileLiteralValues(t *testing.T) {
 		{`TEST_VALUE=  "$HOME # literal" # comment`, "$HOME # literal"},
 		{`TEST_VALUE='$(touch never-created)'`, "$(touch never-created)"},
 		{`TEST_VALUE='literal\nbytes'`, `literal\nbytes`},
+		{`TEST_VALUE="literal\nbytes${HOME}$(command)"`, `literal\nbytes${HOME}$(command)`},
 		{"TEST_VALUE= # disabled", ""},
 		{"TEST_VALUE=''", ""},
 		{"TEST_VALUE=a=b", "a=b"},
@@ -66,10 +67,19 @@ func TestLoadFileLiteralValues(t *testing.T) {
 }
 
 func TestLoadFileIOErrors(t *testing.T) {
-	for _, path := range []string{filepath.Join(t.TempDir(), "missing"), t.TempDir()} {
-		err := (envconfig.Loader{}).Load(path, nil)
+	for _, tt := range []struct {
+		path    string
+		missing bool
+	}{
+		{filepath.Join(t.TempDir(), "missing"), true},
+		{t.TempDir(), false},
+	} {
+		err := (envconfig.Loader{}).Load(tt.path, nil)
 		if err == nil || errors.Is(err, envconfig.ErrInvalid) {
 			t.Fatalf("I/O error = %v", err)
+		}
+		if errors.Is(err, os.ErrNotExist) != tt.missing {
+			t.Fatalf("missing file classification = %t, want %t: %v", errors.Is(err, os.ErrNotExist), tt.missing, err)
 		}
 		var pathErr *os.PathError
 		if !errors.As(err, &pathErr) {
@@ -91,5 +101,11 @@ func TestLoadFileLineLimit(t *testing.T) {
 		} else if !errors.Is(err, envconfig.ErrInvalid) || !strings.Contains(err.Error(), "line 2") || strings.Contains(err.Error(), "xxx") {
 			t.Fatalf("oversized line error = %v", err)
 		}
+	}
+
+	path := writeEnv(t, "# comment\n#"+strings.Repeat("x", 64*1024)+"\n")
+	err := (envconfig.Loader{LookupEnv: lookup(nil)}).Load(path, nil)
+	if !errors.Is(err, envconfig.ErrInvalid) || !strings.Contains(err.Error(), "line 2") || strings.Contains(err.Error(), "xxx") {
+		t.Fatalf("oversized comment error = %v", err)
 	}
 }
