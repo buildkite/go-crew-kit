@@ -42,6 +42,8 @@ Use `errors.Is(err, envconfig.ErrInvalid)` to identify syntax, setting-name, and
 
 ## Development
 
+Buildkite runs formatting checks, tests, race tests, and vet on Go 1.23 using [the pipeline configuration](.buildkite/pipeline.yml).
+
 Run these checks from the repository root, including on Go 1.23:
 
 ```sh

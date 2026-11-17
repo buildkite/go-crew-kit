@@ -1,0 +1,23 @@
+agents:
+  queue: hosted
+
+steps:
+  - label: ":go: Format, test, race, and vet"
+    command: |
+      set -euo pipefail
+      go version
+      unformatted=$(gofmt -l envconfig)
+      if [[ -n "$$unformatted" ]]; then
+        printf 'Run gofmt on these files:\n%s\n' "$$unformatted" >&2
+        exit 1
+      fi
+      go test -count=1 -timeout=5m ./...
+      go test -race -count=1 -timeout=5m ./...
+      go vet ./...
+    timeout_in_minutes: 10
+    plugins:
+      - docker#v5.14.0:
+          image: golang:1.23.12-bookworm
+          environment:
+            - GOTOOLCHAIN=local
+            - CGO_ENABLED=1
