@@ -42,26 +42,32 @@ type Loader struct {
 // On error, targets may be partially updated. Load panics if an applied setting
 // has an unsupported target type or a nil target pointer.
 func (l Loader) Load(path string, settings []Setting) error {
+	// Validate and read the optional file before applying any values.
 	values, err := l.readEnvFile(path, settings)
 	if err != nil {
 		return err
 	}
 
+	// Use the caller's lookup or fall back to the process environment.
 	lookup := l.LookupEnv
 	if lookup == nil {
 		lookup = os.LookupEnv
 	}
 
 	for _, setting := range settings {
+		// Prefer present environment values, including empty ones, over file values.
 		name := l.Prefix + setting.Name
 		value, present := lookup(name)
 		if !present {
 			value, present = values[name]
 		}
+
+		// Preserve the caller's default when neither source supplies a value.
 		if !present {
 			continue
 		}
 
+		// Parse the winning value and report failures without exposing its contents.
 		if reason := setValue(setting.Target, value); reason != "" {
 			return fmt.Errorf("%w: %s: %s", ErrInvalid, name, reason)
 		}
