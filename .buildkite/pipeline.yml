@@ -6,7 +6,7 @@ steps:
     command: |
       set -eu
       go version
-      unformatted=$(gofmt -l envconfig hostname publicip)
+      unformatted=$(gofmt -l envconfig hostname publicip outbound)
       if [ -n "$$unformatted" ]; then
         printf 'Run gofmt on these files:\n%s\n' "$$unformatted" >&2
         exit 1

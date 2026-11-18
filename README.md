@@ -12,6 +12,16 @@ Use [`publicip.IsPublic`](publicip/publicip.go) to apply a conservative public-a
 
 For outbound SSRF protection, you must also authorize destinations, validate every DNS answer, and dial only the vetted addresses without resolving the name again. Keep internal-network exceptions and application-specific connection policy in your application.
 
+## outbound
+
+Use [`outbound.Dialer`](outbound/dial.go) as an `http.Transport.DialContext` hook to authorize destinations, validate every DNS answer, and connect only to the vetted IPs. A missing authorization callback denies all destinations. Authorized destinations use `publicip.IsPublic` unless your callback supplies an address predicate, such as a configured CIDR's `Contains` method. Invalid and zoned addresses are always rejected.
+
+One timeout covers DNS and all connection attempts. Each attempt gets a share of the remaining time so later addresses can be tried. See the [transport example](outbound/dial_example_test.go) for public and internal destinations.
+
+Use [`outbound.Classify`](outbound/errors.go) for stable destination-denied, address-denied, DNS, connection, cancellation, timeout, TLS, and generic transport categories. Dial errors preserve their causes through `errors.Is` and `errors.As`. The dial stage is available through `*outbound.Error` even when the classifier reports cancellation or timeout. Typed certificate, TLS record, and TLS alert failures are recognized. Untyped TLS failures remain generic transport errors rather than being identified by message text.
+
+You still own host-and-port canonicalization, destination rules, credential forwarding, redirects, TLS verification, connection reuse, and response status or retry decisions. Disable environment proxies when configuring the HTTP transport so they don't bypass destination enforcement. Keep the hostname in request URLs for TLS verification and don't log raw errors, which may contain sensitive details. The dialer checks each new connection, not each request on a reused connection.
+
 ## envconfig
 
 Use [`envconfig`](envconfig/loader.go) to load an explicitly selected dotenv file and process environment overrides into an explicit table of field pointers. Set defaults before loading and perform application-specific validation afterward.
