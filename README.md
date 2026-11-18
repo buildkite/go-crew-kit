@@ -2,6 +2,16 @@
 
 Shared Go packages for Buildkite. Requires Go 1.23 or newer.
 
+## filewrite
+
+Use [`filewrite`](filewrite/filewrite.go) for bytes-based file creation and replacement on Unix filesystems with directory syncing support:
+
+- `CreateExclusive(path, data, mode)` refuses existing destinations, applies exactly `mode.Perm()`, writes, syncs and closes the new file. The destination is visible while writing. On failure it attempts removal and preserves cleanup errors, but partial files can remain after a crash or failed cleanup. It does not sync the parent directory.
+- `Replace(ctx, path, data, tempPattern)` writes and syncs a private `0600` staging file beside the destination, renames it into place and syncs the parent. Always inspect its `published` result even on error: a failed directory sync does not undo publication. Cancellation is checked before staging and immediately before rename, not after publication.
+- `SyncDir(path)` opens, syncs and closes a directory, preserving sync and close errors. Use it after successful exclusive creation when you need to confirm the new directory entry, or within your own staged-directory publication sequence.
+
+Parents must already exist. You own directory permissions, conflicting-write serialization, encoding and multi-file recovery. The package does not interrupt blocked filesystem calls, provide multi-file transactions or promise stronger durability than filesystem rename and sync semantics. Errors preserve causes through `errors.Is` and `errors.As` and may contain paths. See the [example](filewrite/filewrite_example_test.go) for creation and replacement.
+
 ## hostname
 
 Use [`hostname.Valid`](hostname/hostname.go) to check ASCII hostname label syntax without normalization or DNS lookup. You control IP-literal handling, case normalization, trailing dots, wildcards, and ports in your application. Numeric dotted names meet the label grammar, so this check alone doesn't distinguish DNS names from IP literals.
